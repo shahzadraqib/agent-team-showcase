@@ -1,36 +1,74 @@
-# AI Agent Team: a governed multi-agent system
+# AI Agent Team
 
-A public, trimmed-down reference of a multi-agent system I designed and directed. A single control plane routes plain-language goals to a small team of specialist AI agents, enforces permission tiers, and requires human approval before anything consequential happens (publishing, spending, messaging, deleting).
+A small, ready-to-use framework for running a team of AI agents safely. Each agent has a clear role and a permission limit, and anything consequential (publishing, sending messages, spending, deleting, deploying) is stopped until a human approves it.
 
-The full production system is private. This repo keeps the architecture, agent role definitions, approval policy, and a working policy engine with tests. It contains no credentials, client data, or business-specific workflows.
+Use it as a starting point for your own agent setup, whatever your field.
 
-Built with **Claude Code**. Specified, directed, reviewed, and approved by me.
+## Quick start
 
-## My role: product owner and lead
+Requires Python 3.10 or newer.
 
-I treated the agents like a team I had to staff, govern, and hold accountable.
+```bash
+git clone https://github.com/shahzadraqib/agent-team-showcase.git
+cd agent-team-showcase
+pip install -r requirements.txt
+python demo.py
+```
 
-| Responsibility | What I did |
+Output:
+
+```
+Research three competitors' pricing pages            -> Tier 1  approval: no
+Draft a blog post about our new feature              -> Tier 2  approval: no
+Open a pull request with the fix                     -> Tier 3  approval: no
+Publish the post to our social accounts              -> Tier 4  approval: YES  [public_publishing]
+Send an email to the whole mailing list              -> Tier 4  approval: YES  [external_messages]
+Force-push the branch                                -> Tier 4  approval: YES  [destructive_operations]
+```
+
+Check any task of your own:
+
+```bash
+python demo.py "Delete all records in the production database"
+```
+
+Run the tests:
+
+```bash
+pytest -q
+```
+
+## What's included
+
+| Path | What it is |
 |---|---|
-| **Defined the mission and roles** | Wrote each agent's mission, boundaries, and handoff rules so no two agents own the same job. 13 roles in the private system, 6 shown here. |
-| **Set the governance model** | Designed five permission tiers and a hard rule that consequential actions need my explicit approval every time. Silence is never consent. |
-| **Managed risk before adoption** | Evaluated and security-scanned 53 external repositories and set a 12-step onboarding pipeline. Nothing runs until it passes review. |
-| **Sequenced delivery in stages** | Preserve first, then the control plane, then the core team, then domain agents, and only build infrastructure the next real workflow needed. |
-| **Required evidence, not confidence** | Every task ends with verification that can fail. A separate reviewer agent can block work, and the builder cannot approve its own output. |
-| **Built a learning loop under control** | Retrospectives turn outcomes into proposed changes. A change needs two pieces of evidence, a regression test, review, and my approval if it touches core rules. |
+| `agents/` | Six agent role definitions you can copy into any AI tool as system prompts |
+| `skills/` | Reusable procedures the agents follow (verification, handoffs, minimal changes) |
+| `policies.yaml` | The rules: permission tiers and which actions need approval |
+| `router/policy_engine.py` | Enforces the rules in code |
+| `demo.py` | Command-line checker for any task |
+| `docs/` | Architecture and approval policy explained |
 
-## The team (shown here)
+## The agents
 
-| Agent | Role | Permission ceiling | Can it act externally? |
-|---|---|---|---|
-| **Forge** | Developer | Tier 2 (local write) | No |
-| **Scout** | Researcher | Tier 1 (read) | No |
-| **Sentinel** | Reviewer | Tier 1 (read), may block | No |
-| **Echo** | Self-improvement | Tier 2, proposals only | No |
-| **Ember** | Content creator | Tier 2 (drafts) | No |
-| **Relay** | Publisher | Tier 3, publishing needs Tier 4 approval | Only with approval |
+| Agent | Role | Permission limit |
+|---|---|---|
+| **Forge** | Developer | Local changes only |
+| **Scout** | Researcher | Read only |
+| **Sentinel** | Reviewer | Read only, can block work |
+| **Echo** | Self-improvement | Proposes changes, never applies core rule changes alone |
+| **Ember** | Content creator | Drafts only |
+| **Relay** | Publisher | Publishes only after explicit approval |
 
-See [`agents/`](agents/) for the full role definitions.
+## Permission tiers
+
+| Tier | Meaning | Needs approval? |
+|---:|---|---|
+| 0 | Reference only | Cannot run |
+| 1 | Read | No |
+| 2 | Local or reversible write | No |
+| 3 | External but reversible (staging, pull requests) | Depends on project |
+| 4 | Consequential (publish, message, spend, delete, deploy, credentials) | **Yes, every time** |
 
 ## How a task flows
 
@@ -38,54 +76,49 @@ See [`agents/`](agents/) for the full role definitions.
  goal in plain language
         │
         ▼
- classify project + sensitivity ──▶ policy engine (tier, triggers, approval?)
-        │                                   │
-        ▼                                   ▼
- pick the minimum agents/skills     Tier 4? ──▶ stop and ask a human
+ policy engine ──▶ tier + triggers ──▶ Tier 4? ──▶ stop and ask a human
         │
         ▼
- agent executes within its ceiling
+ pick the fewest agents needed
         │
         ▼
- verification (evidence that can fail) ──▶ Sentinel review ──▶ run summary
+ agent works within its limit
         │
         ▼
- Echo retrospective ──▶ proposed improvement (never auto-applied to core rules)
+ verification (evidence that can fail) ──▶ Sentinel review
+        │
+        ▼
+ Echo retrospective ──▶ proposed improvement (reviewed, never auto-applied)
 ```
 
-More detail in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`docs/APPROVAL_POLICY.md`](docs/APPROVAL_POLICY.md).
+## Customize it
 
-## Try the policy engine
+- **Change what needs approval:** edit the patterns under `tier4_actions` in `policies.yaml`.
+- **Pre-approve one narrow action:** add an entry to `standing_authorizations` in `policies.yaml` (empty by default).
+- **Add an agent:** copy any file in `agents/`, then set its mission, responsibilities, limit, and stop conditions.
+- **Use it from your own code:**
 
-```bash
-pip install -r requirements.txt
-python demo.py
-pytest -q
-```
+```python
+from router.policy_engine import load_policies, classify_tier, approval_required
 
-`demo.py` classifies sample tasks and shows which ones would be blocked pending human approval:
-
-```
-Research three competitors' pricing pages            -> Tier 1  approval: no
-Draft a blog post about caregiver burnout            -> Tier 2  approval: no
-Open a pull request with the fix                     -> Tier 3  approval: no
-Publish the post to our social accounts              -> Tier 4  approval: YES  [public_publishing]
-Send an email to the full client list                -> Tier 4  approval: YES  [external_messages]
-Force-push the branch                                -> Tier 4  approval: YES  [destructive_operations]
+policies = load_policies()
+tier, triggers = classify_tier("Send the invoice email to every customer", policies)
+if approval_required(tier, triggers, policies):
+    print("Ask a human first:", triggers)
 ```
 
 ## Design principles
 
 1. Inspect before building. Reuse before creating.
-2. Load the minimum context a task needs.
-3. Measure real outcomes, not model confidence.
-4. Self-improvement must be evidence-driven, auditable, and reversible.
+2. Give each agent only the context it needs.
+3. Trust evidence, not model confidence.
+4. Improvements must be evidence-based, reviewed, and reversible.
 5. Consequential actions need explicit human approval, every time.
-6. Agents fail closed: a capability that is not approved does not run.
+6. Fail closed: anything not approved does not run.
 
-## What is not in this repo
+## Author
 
-Credentials, API keys, client and business data, internal workflows, third-party code, run logs, and commit history from the private system. This repo starts from a clean history.
+Designed and led by Raqib Shahzad, built with Claude Code. I defined each agent's role and limits, the approval model, and the review and verification rules.
 
 ## License
 
