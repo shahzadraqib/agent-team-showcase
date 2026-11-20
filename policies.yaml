@@ -1,0 +1,34 @@
+# Policy-as-code, read by router/policy_engine.py.
+# Changing this file is a governance change and needs human review.
+version: 1.0.0
+
+permission_tiers:
+  0: { name: reference,           description: "Cannot execute. Patterns and catalogs only." }
+  1: { name: read,                description: "Research, inspect, analysis." }
+  2: { name: local_write,         description: "Files, code, drafts, local tests." }
+  3: { name: external_reversible, description: "Sandbox, staging, pull requests, draft scheduling." }
+  4: { name: consequential,       description: "Requires explicit approval unless a narrow standing grant exists." }
+
+# Regexes matched case-insensitively against task text. Any match makes the task Tier 4.
+tier4_actions:
+  public_publishing:     ['\bpublish\b', '\bpost (it|this|to)\b', '\bgo live\b']
+  external_messages:     ['\bsend (a |an |the )?(dm|email|message|outreach)', '\bsubmit (the )?form\b']
+  production_deployment: ['\bdeploy\b.*\bprod', '\bpush to production\b']
+  spending:              ['\bspend\b', '\bpurchase\b', '\bpay for\b']
+  destructive_operations: ['\bdelete\b.*\b(prod|production|remote|live|all)\b', '\bdrop (the )?(table|database)\b', '\bforce[- ]push\b']
+  credential_changes:    ['\brotate\b.*\b(keys?|secrets?|credentials?|tokens?)\b', '\bgrant (admin|owner)\b', '\bchange (the )?password\b']
+
+# Narrow, explicit, human-granted. Empty by default.
+standing_authorizations: []
+
+executable_states: [ENABLED]
+
+egress:
+  default: deny
+  unknown_destination: block
+
+self_improvement:
+  min_evidence_events_for_patch: 2
+  requires_regression_test: true
+  requires_reviewer_sign_off: true
+  core_change_requires_human_approval: true
