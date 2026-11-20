@@ -18,7 +18,7 @@ def pol():
     ("Draft a newsletter", 2),
     ("Open a pull request with the fix", 3),
     ("Publish the post", 4),
-    ("Send an email to all clients", 4),
+    ("Send an email to all subscribers", 4),
     ("Rotate the API keys", 4),
 ])
 def test_tier_classification(pol, task, tier):
