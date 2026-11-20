@@ -118,7 +118,7 @@ if approval_required(tier, triggers, policies):
 
 ## Author
 
-Designed and led by Raqib Shahzad, built with Claude Code. I defined each agent's role and limits, the approval model, and the review and verification rules.
+Created and led by **Raqib Shahzad**. I designed each agent's role and limits, the approval model, and the review and verification rules.
 
 ## License
 
